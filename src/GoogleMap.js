@@ -2,6 +2,7 @@
 import React from 'react';
 import { compose, withProps } from 'recompose';
 import { withScriptjs, withGoogleMap, GoogleMap, DirectionsRenderer } from 'react-google-maps';
+import { InfoBox } from 'react-google-maps/lib/components/addons/InfoBox';
 import socketioClient from 'socket.io-client';
 
 const API_KEY = 'AIzaSyBXiSq92h8RuJMmWYQgxffuayD7lrONxbY';
@@ -15,6 +16,7 @@ class Map extends React.Component {
     directions: null,
     destination: null,
     waypoints: [],
+    offline: false,
   };
 
   componentDidMount() {
@@ -33,6 +35,10 @@ class Map extends React.Component {
         waypoints: prevState.waypoints.concat(prevState.destination || []),
       }));
     });
+
+    socket.on('status', status => this.setState(({
+      offline: status === 'offline',
+    })));
   }
 
   componentDidUpdate() {
@@ -64,7 +70,8 @@ class Map extends React.Component {
       stopover: true,
     }));
 
-    this.directionsService.route({
+    this.directionsService.route(
+      {
         origin,
         destination,
         travelMode,
@@ -81,7 +88,22 @@ class Map extends React.Component {
   }
 
   render() {
-    return <GoogleMap>{this.state.directions && <DirectionsRenderer directions={this.state.directions} />}</GoogleMap>;
+    return (
+      <GoogleMap>
+        {this.state.directions && <DirectionsRenderer directions={this.state.directions} />}
+        {this.state.offline && this.state.destination &&
+          <InfoBox
+            defaultPosition={new google.maps.LatLng(this.state.destination.lat, this.state.destination.lng)}
+          >
+            <div style={{ backgroundColor: `cyan`, opacity: 0.75, padding: `12px` }}>
+              <div style={{ fontSize: `16px`, fontColor: `#08233B` }}>
+                The user is now offline.
+              </div>
+            </div>
+          </InfoBox>
+        }
+      </GoogleMap>
+    );
   }
 }
 
