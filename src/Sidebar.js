@@ -1,0 +1,47 @@
+import React from 'react';
+import './Sidebar.css';
+
+function Sidebar(props) {
+  const { users, onUserSelect, onAddUser, onRemoveUser } = props;
+
+  return (
+    <div className="sidebar">
+      <div className="header">Track<span title="Mohsin Ul Haq">™</span></div>
+      <hr />
+      <div className="container">
+        {users.map(user => (
+          <div className="row">
+            <div
+              title="User status"
+              className={`status ${user.offline ? 'offline' : ''}`}
+            />
+            <div className="button-group">
+              <button
+                className={`btn user-button ${user.isSelected ? 'isSelected' : ''}`}
+                onClick={() => onUserSelect(user.id)}
+              >
+                {user.name}
+              </button>
+              <button
+                title="Remove this user"
+                className="btn remove-user-button"
+                onClick={() => onRemoveUser(user.id)}
+              >x
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        className="btn add-user-button"
+        onClick={onAddUser}
+      >
+        Add user
+      </button>
+    </div>
+  );
+}
+
+Sidebar.displayName = 'Sidebar';
+
+export default Sidebar;

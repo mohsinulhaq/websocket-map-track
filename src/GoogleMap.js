@@ -8,25 +8,34 @@ import socketioClient from 'socket.io-client';
 const API_KEY = 'AIzaSyBXiSq92h8RuJMmWYQgxffuayD7lrONxbY';
 const GOOGLE_MAP_URL = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}`;
 
+function getGoogleCoordinates(coordinates = {}) {
+  const defaultCoordinates = {
+    lat: 34.068998,
+    lng: 74.8078893,
+  };
+  return new google.maps.LatLng(
+    coordinates.lat || defaultCoordinates.lat,
+    coordinates.lng || defaultCoordinates.lng,
+  );
+}
+
 class Map extends React.Component {
   static displayName = 'GoogleMapContainer';
 
   state = {
-    origin: null,
-    directions: null,
-    destination: null,
+    origin: undefined,
+    directions: undefined,
+    destination: undefined,
     waypoints: [],
     offline: false,
   };
 
   componentDidMount() {
-    const socket = socketioClient();
+    const socket = this.socket = socketioClient();
     this.directionsService = new google.maps.DirectionsService();
 
-    socket.on('initialCoordinates', initialCoordinates => {
-      this.setState({
-        origin: initialCoordinates,
-      });
+    socket.on('initialCoordinates', (initialCoordinates, callback) => {
+      this.setState({ origin: initialCoordinates}, callback);
     });
 
     socket.on('randomCoordinates', randomCoordinates => {
@@ -36,9 +45,11 @@ class Map extends React.Component {
       }));
     });
 
-    socket.on('status', status => this.setState(({
-      offline: status === 'offline',
-    })));
+    socket.on('status', status => {
+      const { id, onChangeStatus } = this.props;
+
+      this.setState({ offline: status === 'offline' }, () => onChangeStatus(id, status));
+    });
   }
 
   componentDidUpdate() {
@@ -56,17 +67,21 @@ class Map extends React.Component {
     this.updateRoute(origin, destination, waypoints);
   }
 
+  componentWillUnmount() {
+    this.socket.disconnect();
+  }
+
   updateRoute(originCoordinates, destinationCoordinates, waypointCoordinates) {
-    const origin = new google.maps.LatLng(originCoordinates.lat, originCoordinates.lng);
+    const origin = getGoogleCoordinates(originCoordinates);
 
     const destination = destinationCoordinates
-      ? new google.maps.LatLng(destinationCoordinates.lat, destinationCoordinates.lng)
+      ? getGoogleCoordinates(destinationCoordinates)
       : origin;
 
     const travelMode = google.maps.TravelMode.WALKING;
 
     const waypoints = waypointCoordinates.map(coord => ({
-      location: new google.maps.LatLng(coord.lat, coord.lng),
+      location: getGoogleCoordinates(coord),
       stopover: true,
     }));
 
@@ -88,32 +103,31 @@ class Map extends React.Component {
   }
 
   render() {
+    const { directions, destination, offline } = this.state;
+
     return (
       <GoogleMap>
-        {this.state.directions && <DirectionsRenderer directions={this.state.directions} />}
-        {this.state.offline && this.state.destination &&
-          <InfoBox
-            defaultPosition={new google.maps.LatLng(this.state.destination.lat, this.state.destination.lng)}
-          >
-            <div style={{ backgroundColor: `cyan`, opacity: 0.75, padding: `12px` }}>
-              <div style={{ fontSize: `16px`, fontColor: `#08233B` }}>
-                The user is now offline.
+        {directions && <DirectionsRenderer directions={directions} />}
+        {offline &&
+          destination && (
+            <InfoBox defaultPosition={getGoogleCoordinates(destination)}>
+              <div style={{ backgroundColor: `cyan`, opacity: 0.75, padding: `12px` }}>
+                <div style={{ fontSize: `16px`, fontColor: `#08233B` }}>The user is now offline.</div>
               </div>
-            </div>
-          </InfoBox>
-        }
+            </InfoBox>
+          )}
       </GoogleMap>
     );
   }
 }
 
 export default compose(
-  withProps({
+  withProps(props => ({
     googleMapURL: GOOGLE_MAP_URL,
     loadingElement: <div style={{ height: '100vh' }} />,
-    containerElement: <div style={{ height: '100vh' }} />,
+    containerElement: <div style={{ width: '100%', height: '100vh', display: props.isVisible ? 'block' : 'none' }} />,
     mapElement: <div style={{ height: '100vh' }} />,
-  }),
+  })),
   withScriptjs,
   withGoogleMap,
 )(Map);
