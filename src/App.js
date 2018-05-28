@@ -1,72 +1,31 @@
-import React, { Component } from 'react';
+import React from 'react';
+import { connect } from 'react-redux';
 import Sidebar from './Sidebar';
 import GoogleMap from './GoogleMap';
-import uuid from 'uuid/v4';
-import faker from 'faker';
+import { addUser, removeUser, updateUser } from './actions';
 
-function getRandomUser() {
-  return {
-    id: uuid(),
-    name: faker.name.findName(),
-    isSelected: false,
-  }
-}
-
-class App extends Component {
-  state = {
-    users: [{
-      ...getRandomUser(),
-      isSelected: true,
-    }],
-  };
-
-  onUserSelect = userId => {
-    this.setState(prevState => ({
-      users: prevState.users.map(user => {
-        user.isSelected = user.id === userId;
-        return user;
-      }),
-    }));
-  };
-
-  onAddUser = () => {
-    this.setState(prevState => ({
-      users: prevState.users.concat(getRandomUser()),
-    }));
-  };
-
-  onRemoveUser = userId => {
-    this.setState(prevState => ({
-      users: prevState.users.filter(user => user.id !== userId),
-    }));
-  };
-
-  onChangeStatus = (userId, status) => {
-    this.setState(prevState => ({
-      users: prevState.users.map(user => {
-        if (user.id === userId) {
-          user.offline = status === 'offline';
-        }
-        return user;
-      }),
-    }));
-  };
-
-  render() {
-    return (
-      <div style={{ display: 'flex' }}>
-        <Sidebar
-          users={this.state.users}
-          onUserSelect={this.onUserSelect}
-          onAddUser={this.onAddUser}
-          onRemoveUser={this.onRemoveUser}
+function App(props) {
+  const { users, updateUser, addUser, removeUser } = props;
+  return (
+    <div style={{ display: 'flex' }}>
+      <Sidebar
+        users={users}
+        addUser={addUser}
+        updateUser={updateUser}
+        removeUser={removeUser}
+      />
+      {users.map(user => user.isSelected &&
+        <GoogleMap
+          key={user.id}
+          user={user}
+          updateUser={updateUser}
         />
-        {this.state.users.map(user => (
-          <GoogleMap key={user.id} id={user.id} onChangeStatus={this.onChangeStatus} isVisible={user.isSelected} />
-        ))}
-      </div>
-    );
-  }
+      )}
+    </div>
+  );
 }
 
-export default App;
+export default connect(
+  state => ({ users: state }),
+  { addUser, updateUser, removeUser },
+)(App);

@@ -2,7 +2,7 @@
 import React from 'react';
 import { compose, withProps } from 'recompose';
 import { withScriptjs, withGoogleMap, GoogleMap, DirectionsRenderer } from 'react-google-maps';
-import { InfoBox } from 'react-google-maps/lib/components/addons/InfoBox';
+import InfoBox from 'react-google-maps/lib/components/addons/InfoBox';
 import socketioClient from 'socket.io-client';
 
 const API_KEY = 'AIzaSyBXiSq92h8RuJMmWYQgxffuayD7lrONxbY';
@@ -22,45 +22,39 @@ function getGoogleCoordinates(coordinates = {}) {
 class Map extends React.Component {
   static displayName = 'GoogleMapContainer';
 
-  state = {
-    origin: undefined,
-    directions: undefined,
-    destination: undefined,
-    waypoints: [],
-    offline: false,
-  };
-
   componentDidMount() {
+    const { user : { id }, updateUser } = this.props;
     const socket = this.socket = socketioClient();
     this.directionsService = new google.maps.DirectionsService();
 
     socket.on('initialCoordinates', (initialCoordinates, callback) => {
-      this.setState({ origin: initialCoordinates}, callback);
+      updateUser(id, { origin: initialCoordinates });
+      callback();
     });
 
     socket.on('randomCoordinates', randomCoordinates => {
-      this.setState(prevState => ({
+      const { user : { destination, waypoints } } = this.props;
+      updateUser(id, {
         destination: randomCoordinates,
-        waypoints: prevState.waypoints.concat(prevState.destination || []),
-      }));
+        waypoints: waypoints.concat(destination || []),
+      });
     });
 
     socket.on('status', status => {
-      const { id, onChangeStatus } = this.props;
-
-      this.setState({ offline: status === 'offline' }, () => onChangeStatus(id, status));
+      updateUser(id, { offline: status === 'offline' });
     });
   }
 
   componentDidUpdate() {
-    let { origin, destination, waypoints } = this.state;
+    const { user, updateUser } = this.props;
+    let { origin, destination, waypoints } = user;
 
     // maximum waypoints allowed by google maps api is 23
     if (waypoints.length > 23) {
-      this.setState(prevState => ({
-        origin: prevState.waypoints[0],
-        waypoints: prevState.waypoints.slice(1),
-      }));
+      updateUser(user.id, {
+        origin: waypoints[0],
+        waypoints: waypoints.slice(1),
+      });
       return;
     }
 
@@ -72,6 +66,7 @@ class Map extends React.Component {
   }
 
   updateRoute(originCoordinates, destinationCoordinates, waypointCoordinates) {
+    const { user, updateUser } = this.props;
     const origin = getGoogleCoordinates(originCoordinates);
 
     const destination = destinationCoordinates
@@ -94,16 +89,14 @@ class Map extends React.Component {
       },
       (result, status) => {
         if (status === google.maps.DirectionsStatus.OK) {
-          this.setState({
-            directions: result,
-          });
+          updateUser(user.id, { directions: result });
         }
       },
     );
   }
 
   render() {
-    const { directions, destination, offline } = this.state;
+    const { directions, destination, offline } = this.props.user;
 
     return (
       <GoogleMap>
@@ -122,12 +115,12 @@ class Map extends React.Component {
 }
 
 export default compose(
-  withProps(props => ({
+  withProps({
     googleMapURL: GOOGLE_MAP_URL,
-    loadingElement: <div style={{ height: '100vh' }} />,
-    containerElement: <div style={{ width: '100%', height: '100vh', display: props.isVisible ? 'block' : 'none' }} />,
+    loadingElement: <div />,
+    containerElement: <div style={{ width: '100%' }} />,
     mapElement: <div style={{ height: '100vh' }} />,
-  })),
+  }),
   withScriptjs,
   withGoogleMap,
 )(Map);

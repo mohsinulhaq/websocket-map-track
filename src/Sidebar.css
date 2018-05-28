@@ -1,19 +1,20 @@
 .sidebar {
   position: relative;
   width: 30vw;
-  height: 97.5vh;
-  background-color: #37474F;
-  color: #DEE4E7;
-  padding: 1rem;
+  height: 100vh;
+  background-color: #37474f;
+  color: #dee4e7;
+  flex: 0 0 25%;
 }
 
 .sidebar .header {
-  margin-bottom: 2rem;
+  margin: 1.5rem;
   text-align: center;
   font-size: 1.8rem;
 }
 
 .sidebar .container {
+  margin: 1rem;
   max-height: 80vh;
   overflow: scroll;
 }
@@ -21,7 +22,7 @@
 .sidebar .btn {
   border: none;
   cursor: pointer;
-  color: #DEE4E7;
+  color: #dee4e7;
   font-size: 1.4rem;
   width: 100%;
   outline: none;
@@ -70,8 +71,8 @@
 .sidebar .status {
   display: inline-block;
   background-color: #4db6ac;
-  width: 2rem;
-  height: 2rem;
+  width: 1.5rem;
+  height: 1.5rem;
   border-radius: 50%;
   margin-right: 1rem;
 }

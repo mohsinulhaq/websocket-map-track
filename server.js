@@ -1,10 +1,12 @@
 const express = require('express');
 const path = require('path');
 const app = express();
+const shrinkRay = require('shrink-ray');
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
-const port = process.env.PORT || 3000;
 
+const port = process.env.PORT || 3000;
+const isProduction = process.env.NODE_ENV === 'production';
 const updateInterval = 3000;
 const range = 0.01;
 // a location near my college
@@ -34,6 +36,13 @@ function startEmmision(socket) {
     }, getRandomNumberBetween(5, 8) * 1000);
   }, getRandomNumberBetween(5, 8) * 1000);
 }
+
+app.set('etag', isProduction);
+app.use((req, res, next) => {
+  res.removeHeader('X-Powered-By');
+  next();
+});
+app.use(shrinkRay());
 
 app.use(express.static(path.join(__dirname, 'build')));
 
